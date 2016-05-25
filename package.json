@@ -1,0 +1,9 @@
+{
+  "name": "ring",
+  "version": "1.0.0",
+  "description": "Promises/A+ implementation",
+  "author": "Brandon Fleming",
+  "dependencies": {
+    "requirejs": "^2.2.0"
+  }
+}
