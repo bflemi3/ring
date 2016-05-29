@@ -20,6 +20,9 @@ function Promise(fn) {
             return;
         }
 
+        var callback = this.state === 'resolved' ? handler.onResolved : handler.onRejected;
+        if(!callback)
+
     }
 
     fn(resolve, reject);
@@ -36,12 +39,12 @@ Promise.prototype = {
 
     then: function(onResolved, onRejected) {
         // if onResolved is a function then queue it up so we can call it when this.state == resolved
-        if(_.isFunction(onResolved))
-            enqueue(this, onResolved);
+        if(!_.isFunction(onResolved))
+            throw new Error("Invalid argument type. 'onResolved' must be a function.");
 
         // if onRejected is a function then queue it up so we can call it when this.state == rejected
         if(_.isFunction(onRejected))
-            enqueue(this, onRejected);
+            throw new Error("Invalid argument type. 'onRejected' must be a function.");
 
         // return a new promise instance so we can chain
         return new Promise(function(resolve, reject) {
