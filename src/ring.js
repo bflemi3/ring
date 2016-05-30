@@ -1,51 +1,75 @@
 var _ = require('utils');
 
-function Promise(fn) {
-    if(!_.isFunction(fn)) return _.error('Invalid argument type. A promise only excepts a function.')
+var PENDING = 0,
+    RESOLVED = 1,
+    REJECTED = 2;
 
-    var value = null,
+function Promise(fn) {
+    if(!_.isFunction(fn)) return _.error('Invalid argument type. A promise only excepts a function.');
+
+    var _value = null,
         deferred = null;
 
     function resolve(value) {
-        this.state = 'resolved';
+        try {
+            if(value && _.isFunction(value.then)) {
+                value.then(resolve, reject);
+                return;
+            }
+
+            this.state = RESOLVED;
+            _value = value;
+            handle(this, this.deferred);
+        } catch(e) {
+            reject(e);
+        }
+
     }
 
     function reject(value) {
-        this.state = 'reject';
-    }
-
-    function handle(handler) {
-        if(this.state === 'pending') {
-            deferred = handler;
+        if(value && _.isFunction(value.then)) {
+            value.then(resolve, reject);
             return;
         }
 
-        var callback = this.state === 'resolved' ? handler.onResolved : handler.onRejected;
-        if(!callback)
-
+        this.state = REJECTED;
+        _value = value;
+        handle(this, this.deferred)
     }
 
     fn(resolve, reject);
 }
 
 function handle(promise, handler) {
-    if(promise.state === 'pending') {
-
+    if(promise.state === PENDING) {
+        promise.deferred = handler;
+        return;
     }
+
+    // handle if there is a callback
+    var callback = promise.state === RESOLVED ? handler.onResolved : handler.onRejected;
+    if(callback && _.isFunction(callback)) {
+        try {
+            handler.resolve(callback(promise.value));
+        } catch(e) {
+            handler.reject(e);
+        }
+    }
+
+    // if there isn't a callback then resolve or reject appropriately
+    if(promise.state === RESOLVED)
+        handler.resolve(promise.value);
+        return;
+
+    handler.reject(promise.value);
 }
 
 Promise.prototype = {
-    state: 'pending',
+    state: PENDING,
+
+    deferred: null,
 
     then: function(onResolved, onRejected) {
-        // if onResolved is a function then queue it up so we can call it when this.state == resolved
-        if(!_.isFunction(onResolved))
-            throw new Error("Invalid argument type. 'onResolved' must be a function.");
-
-        // if onRejected is a function then queue it up so we can call it when this.state == rejected
-        if(_.isFunction(onRejected))
-            throw new Error("Invalid argument type. 'onRejected' must be a function.");
-
         // return a new promise instance so we can chain
         return new Promise(function(resolve, reject) {
             handle({onResolved: onResolved, onRejected: onRejected, resolve: resolve, reject: reject});
@@ -54,6 +78,8 @@ Promise.prototype = {
 
     catch: function(onRejected) {
 
-        return this;
+        return new Promise(function(resolve, reject) {
+            handle({onRejected: onRejected, resolve: resolve, reject: reject});
+        });
     }
 };
