@@ -46,22 +46,24 @@ function handle(promise, handler) {
         return;
     }
 
-    // handle if there is a callback
-    var callback = promise.state === RESOLVED ? handler.onResolved : handler.onRejected;
-    if(callback && _.isFunction(callback)) {
-        try {
-            handler.resolve(callback(promise.value));
-        } catch(e) {
-            handler.reject(e);
+    setTimeout(function() {
+        // handle if there is a callback
+        var callback = promise.state === RESOLVED ? handler.onResolved : handler.onRejected;
+        if(callback && _.isFunction(callback)) {
+            try {
+                handler.resolve(callback(promise.value));
+            } catch(e) {
+                handler.reject(e);
+            }
         }
-    }
 
-    // if there isn't a callback then resolve or reject appropriately
-    if(promise.state === RESOLVED)
-        handler.resolve(promise.value);
+        // if there isn't a callback then resolve or reject appropriately
+        if(promise.state === RESOLVED)
+            handler.resolve(promise.value);
         return;
 
-    handler.reject(promise.value);
+        handler.reject(promise.value);
+    }, 0);
 }
 
 Promise.prototype = {
@@ -72,14 +74,14 @@ Promise.prototype = {
     then: function(onResolved, onRejected) {
         // return a new promise instance so we can chain
         return new Promise(function(resolve, reject) {
-            handle({onResolved: onResolved, onRejected: onRejected, resolve: resolve, reject: reject});
+            handle(this, {onResolved: onResolved, onRejected: onRejected, resolve: resolve, reject: reject});
         });
     },
 
     catch: function(onRejected) {
 
         return new Promise(function(resolve, reject) {
-            handle({onRejected: onRejected, resolve: resolve, reject: reject});
+            handle(this, {onRejected: onRejected, resolve: resolve, reject: reject});
         });
     }
 };
